@@ -32,6 +32,8 @@ struct libusb_device_handle *devHandle = NULL;
 struct sigaction saold;
 int force_stop = 0;
 
+void v_print(int mode, int len) ; 
+
 /* SIGINT handler */
 void sig_int(int signo)
 {
@@ -343,6 +345,7 @@ int32_t ch341SpiRead(uint8_t *buf, uint32_t add, uint32_t len)
     uint32_t ret;
     int32_t old_counter;
     struct timeval tv = {0, 100};
+    v_print( 0, len); // verbose
 
     memset(out, 0xff, CH341_MAX_PACKET_LEN);
     for (int i = 1; i < CH341_MAX_PACKETS; ++i) // fill CH341A_CMD_SPI_STREAM for every packet
@@ -352,6 +355,7 @@ int32_t ch341SpiRead(uint8_t *buf, uint32_t add, uint32_t len)
     xferBulkOut = libusb_alloc_transfer(0);
 
     while (len > 0) {
+	v_print( 1, len); // verbose
         ch341SpiCs(out, true);
         idx = CH341_PACKET_LENGTH + 1;
         out[idx++] = 0xC0; // byte swapped command for Flash Read
@@ -405,6 +409,7 @@ int32_t ch341SpiRead(uint8_t *buf, uint32_t add, uint32_t len)
     }
     libusb_free_transfer(xferBulkIn);
     libusb_free_transfer(xferBulkOut);
+    v_print( 2, 0 ); // verbose
     return ret;
 }
 
@@ -420,13 +425,16 @@ int32_t ch341SpiWrite(uint8_t *buf, uint32_t add, uint32_t len)
     uint32_t ret;
     int32_t old_counter;
     struct timeval tv = {0, 100};
-
+    v_print( 0, len); // verbose
+    
     if (devHandle == NULL) return -1;
     memset(out, 0xff, WRITE_PAYLOAD_LENGTH);
     xferBulkIn  = libusb_alloc_transfer(0);
     xferBulkOut = libusb_alloc_transfer(0);
 
     while (len > 0) {
+	v_print( 1, len); // verbose
+	    
         out[0] = 0x06; // Write enable
         ret = ch341SpiStream(out, in, 1);
         ch341SpiCs(out, true);
@@ -494,5 +502,7 @@ int32_t ch341SpiWrite(uint8_t *buf, uint32_t add, uint32_t len)
     }
     libusb_free_transfer(xferBulkIn);
     libusb_free_transfer(xferBulkOut);
+    
+    v_print( 2, 0 ); // verbose
     return ret;
 }

@@ -25,6 +25,43 @@
 #include <string.h>
 #include <getopt.h>
 #include "ch341a.h"
+#include <time.h>
+#include <stdio.h>
+
+int verbose;
+
+void v_print(int mode, int len) { // mode: begin=0, progress = 1
+static int size = 0;
+static time_t started,reported;
+int dur,done;
+if (!verbose) return ;
+time_t now;
+time(&now);
+switch (mode) {
+  case 0: // setup
+	size = len;
+	started = reported = now;
+        break;
+  case 1: // progress
+	if (now == started ) return ; 
+        dur = now - started;
+        done = size-len;
+	if (done >0 && reported !=now) { 
+        printf("Bytes: %d (%d%c),  Time: %d, ETA: %d   \r",done,
+                           (done*100)/size, '%', dur, (int) ( (dur*size*1.0)/done-dur));
+		fflush(stdout);
+		reported = now;
+	        }
+	break;
+  case 2: // done
+	dur = now - started; if (dur<1) dur=1;
+        printf("Total:  %d sec,  average speed  %d  bytes per second.\n",dur, size/dur);
+	break;
+	
+	break;
+}
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -41,6 +78,7 @@ int main(int argc, char* argv[])
     const char usage[] =
         "\nUsage:\n"\
         " -h, --help             display this message\n"\
+	" -v,--verbose		print verbose info\n"\
         " -i, --info             read the chip ID info\n"\
         " -e, --erase            erase the entire chip\n"\
         " -l, --length <bytes>   manually set length\n"\
@@ -51,7 +89,8 @@ int main(int argc, char* argv[])
     const struct option options[] = {
         {"help",    no_argument,        0, 'h'},
         {"erase",   no_argument,        0, 'e'},
-        {"write",   required_argument,  0, 'w'},
+  	{"verbose",   no_argument,        0, 'v'},
+	{"write",   required_argument,  0, 'w'},
         {"length",   required_argument,  0, 'l'},
         {"read",    required_argument,  0, 'r'},
 	{"turbo",   no_argument,  0, 't'},
@@ -60,7 +99,7 @@ int main(int argc, char* argv[])
 
         int32_t optidx = 0;
 
-        while ((c = getopt_long(argc, argv, "hiew:r:l:td", options, &optidx)) != -1){
+        while ((c = getopt_long(argc, argv, "hiew:r:l:td:v", options, &optidx)) != -1){
             switch (c) {
                 case 'i':
                 case 'e':
@@ -69,6 +108,9 @@ int main(int argc, char* argv[])
                     else
                         op = 'x';
                     break;
+		case 'v':
+			verbose = 1;
+		        break;
                 case 'w':
                 case 'r':
                     if (!op) {
